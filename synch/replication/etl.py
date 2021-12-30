@@ -49,7 +49,8 @@ def etl_full(
                     table_name,
                     pk,
                     table.get("partition_by"),
-                    table.get("engine_settings"),
+                    table.get("settings"),
+                    table.get("ttl"),
                     sign_column=sign_column,
                     version_column=version_column,
                 )
@@ -63,8 +64,15 @@ def etl_full(
                     )
             if reader.fix_column_type and not table.get("skip_decimal"):
                 writer.fix_table_column_type(reader, schema, table_name)
-            full_insert_sql = writer.get_full_insert_sql(reader, schema, table_name, sign_column)
-            writer.execute(full_insert_sql)
+
+            names = writer.get_prefix_table_name_result(
+                reader, schema, table_name, table.get("table_suffix") or '')
+            for name in names:
+                full_insert_sql = writer.get_full_insert_sql(
+                    reader, schema, table_name, name, sign_column)
+                writer.execute(full_insert_sql)
+                logger.info(f"insert data for {schema}.{name} finished!")
+
             logger.info(f"full data etl for {schema}.{table_name} success")
         else:
             logger.debug(

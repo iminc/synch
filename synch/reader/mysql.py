@@ -28,7 +28,7 @@ class Mysql(Reader):
             port=self.port,
             user=self.user,
             password=self.password,
-            connect_timeout=5,
+            connect_timeout=50,
             cursorclass=DictCursor,
             charset="utf8",
         )

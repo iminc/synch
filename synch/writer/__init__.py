@@ -75,6 +75,18 @@ class ClickHouse:
                 fix_sql = f"alter table {database}.{table}{cluster_sql(self.cluster_name)} modify column {column_name} {column_type}"
             self.execute(fix_sql)
 
+    def get_prefix_table_name_result(self, reader, database, table, suffix=None):
+        sql = f"select TABLE_NAME from information_schema.TABLES where TABLE_SCHEMA = '{database}' and TABLE_NAME like '{table}{suffix or ''}'"
+        cursor = reader.conn.cursor()
+        cursor.execute(sql)
+        logger.debug(sql)
+        ret = cursor.fetchall()
+
+        tables = []
+        for item in ret:
+            tables.append(item.get("TABLE_NAME"))
+        return tables
+
     def insert_events(self, schema: str, table: str, insert_data: List[Dict]):
         insert_sql = "insert into {0}.{1} values ".format(schema, table)
         self.execute(insert_sql, list(map(lambda x: x.get("values"), insert_data)))
@@ -88,13 +100,14 @@ class ClickHouse:
         pk,
         partition_by: str,
         engine_settings: str,
+        ttl: str,
         **kwargs,
     ):
         if self.cluster_name:
             self.engine = f"ReplicatedMergeTree('/clickhouse/tables/{{shard}}/{schema}/{table}','{{replica}}')"
 
     @abc.abstractmethod
-    def get_full_insert_sql(self, reader: Reader, schema: str, table: str, sign_column: str = None):
+    def get_full_insert_sql(self, reader: Reader, schema: str, targetTable: str, sourceTable: str, sign_column: str = None):
         raise NotImplementedError
 
     @abc.abstractmethod

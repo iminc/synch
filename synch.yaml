@@ -6,7 +6,7 @@ core:
   monitoring: true
 
 redis:
-  host: redis
+  host: 172.16.30.97
   port: 6379
   db: 0
   password:
@@ -24,7 +24,7 @@ source_dbs:
     alias: mysql_db # must be unique
     broker_type: redis # current support redis and kafka
     server_id: 1
-    host: mysql
+    host: 172.16.30.97
     port: 3306
     user: root
     password: "123456"
@@ -40,7 +40,9 @@ source_dbs:
         # optional, default true, auto create database when database in clickhouse not exists
         auto_create: true
         tables:
-          - table: test
+          - table: bs_watershed_station_scene
+            # table suffix, eg: like 'bs_watershed_station_scene%'
+            table_suffix: "%"
             # optional, default false, if your table has decimal column with nullable, there is a bug with full data etl will, see https://github.com/ClickHouse/ClickHouse/issues/7690.
             skip_decimal: false # set it true will replace decimal with string type.
             # optional, default true
@@ -48,52 +50,54 @@ source_dbs:
             # optional, default ReplacingMergeTree
             clickhouse_engine: ReplacingMergeTree # current support MergeTree, CollapsingMergeTree, VersionedCollapsingMergeTree, ReplacingMergeTree
             # optional
-            partition_by: # Table create partitioning by, like toYYYYMM(created_at).
+            partition_by: toYYYYMM(date_time) # Table create partitioning by, like toYYYYMM(created_at).
+            # optional
+            ttl: # Table create ttl, like date_time INTERVAL 7 DAY TO DISK 'cold_storage'
             # optional
             settings: # Table create settings, like index_granularity=8192
             # optional
             sign_column: sign # need when clickhouse_engine=CollapsingMergeTree and VersionedCollapsingMergeTree, no need real in source db, will auto generate in clickhouse
             # optional
             version_column: # need when clickhouse_engine=VersionedCollapsingMergeTree and ReplacingMergeTree(optional), need real in source db, usually is `updated_at` with auto update.
-  - db_type: postgres
-    alias: postgres_db
-    broker_type: kafka # current support redis and kafka
-    host: postgres
-    port: 5432
-    user: postgres
-    password: "123456"
-    databases:
-      - database: postgres
-        auto_create: true
-        tables:
-          - table: test
-            auto_full_etl: true
-            clickhouse_engine: ReplacingMergeTree
-            sign_column: sign
-            version_column:
-            partition_by:
-            settings:
+  # - db_type: postgres
+  #   alias: postgres_db
+  #   broker_type: kafka # current support redis and kafka
+  #   host: postgres
+  #   port: 5432
+  #   user: postgres
+  #   password: "123456"
+  #   databases:
+  #     - database: postgres
+  #       auto_create: true
+  #       tables:
+  #         - table: test
+  #           auto_full_etl: true
+  #           clickhouse_engine: ReplacingMergeTree
+  #           sign_column: sign
+  #           version_column:
+  #           partition_by:
+  #           settings:
 
 clickhouse:
   # shard hosts when cluster, will insert by random
   hosts:
-    - clickhouse:9000
-#    - clickhouse:9021
+    - 127.0.0.1:9000
+  #    - clickhouse:9021
   user: default
-  password: ''
-  cluster_name:  # enable cluster mode when not empty, and hosts must be more than one if enable.
+  password: ""
+  cluster_name: # enable cluster mode when not empty, and hosts must be more than one if enable.
   distributed_suffix: _all # distributed tables suffix, available in cluster
-kafka:
-  servers:
-    - kafka:9092
-  topic_prefix: synch
+# kafka:
+#   servers:
+#     - kafka:9092
+#   topic_prefix: synch
 
 # enable this to send error report, comment or delete these if not.
-mail:
-  mailhost: smtp.gmail.com
-  fromaddr: long2ice@gmail.com
-  toaddrs:
-    - long2ice@gmail.com
-  user: long2ice@gmail.com
-  password: "123456"
-  subject: "[synch] Error logging report"
+# mail:
+#   mailhost: smtp.gmail.com
+#   fromaddr: long2ice@gmail.com
+#   toaddrs:
+#     - long2ice@gmail.com
+#   user: long2ice@gmail.com
+#   password: "123456"
+#   subject: "[synch] Error logging report"
